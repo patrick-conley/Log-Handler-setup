@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/PConley-Log-Setup.t
+lib/PConley/Log/Setup.pm

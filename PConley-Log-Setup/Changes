@@ -1,0 +1,6 @@
+Revision history for Perl extension PConley::Log::Setup.
+
+0.01  Sun Nov 20 21:58:31 2011
+	- original version; created by h2xs 1.23 with options
+		-AX PConley::Log::Setup
+
