@@ -10,7 +10,12 @@ use utf8;
 use Log::Handler;
 use Params::Validate;
 
-# Function: setup( Log::Handler->new(), verbosity => $verb, logfile => $out ) {{{1
+require Exporter;
+our @ISA = qw/ Exporter /;
+
+our @EXPORT_OK = qw/ log_setup /;
+
+# Function: log_setup( Log::Handler->new(), verbosity => $verb, logfile => $out ) {{{1
 # Purpose : Call Log::Handler methods to set up its output
 #           -1 = Quiet:   nothing is printed to stdout/stderr; errors are
 #                         written to the log file (if given)
@@ -22,7 +27,7 @@ use Params::Validate;
 #           [ int verbosity ]
 #           [ string logfile ]
 # Return  : N/A
-sub setup
+sub log_setup
 {
 
    my $logger = shift;
@@ -32,12 +37,13 @@ sub setup
             type => Params::Validate::SCALAR,
             default => 0,
             callbacks => {
-               'greater than quiet' => sub { shift >= -1 },
-               'less than verbose' => sub { shift <= 2 },
+               'greater than quiet' => sub { shift @_ >= -1 },
+               'less than verbose' => sub { shift @_ <= 2 },
             },
          },
          logfile => {
             type => Params::Validate::SCALAR,
+            optional => 1,
          },
       } );
 
@@ -51,7 +57,7 @@ sub setup
       # $verb = 2
       my $debug_verbosity = $options{verbosity} + 5;
 
-      $log->add(
+      $logger->add(
          screen => {
             maxlevel => $debug_verbosity, minlevel => "info",
             log_to => "STDOUT", message_layout => $logFormat,
@@ -60,7 +66,7 @@ sub setup
 
       if ( defined $options{logfile} )
       {
-         $log->add(
+         $logger->add(
             file => {
                maxlevel => "info", minlevel => "emergency",
                filename => $options{logfile} . ".log", message_layout => "%T [%L] %m",
@@ -73,14 +79,14 @@ sub setup
    # Debug and default modes {{{2
    if ( $options{verbosity} >= 0 )
    {
-      $log->add(
+      $logger->add(
          screen => {
             maxlevel => "notice", minlevel => "notice",
             log_to => "STDOUT", message_layout => $logFormat,
          }
       );
 
-      $log->add(
+      $logger->add(
          screen => {
             maxlevel => "warning", minlevel => "error",
             log_to => "STDERR", message_layout => $logFormat,
@@ -89,7 +95,7 @@ sub setup
 
    }
 
-   $log->add(
+   $logger->add(
       forward => {
          maxlevel => "critical", minlevel => "emerg",
          message_layout => $logFormat,
@@ -100,7 +106,7 @@ sub setup
    # error-file {{{2
    if ( defined $options{logfile} )
    {
-      $log->add(
+      $logger->add(
          file => {
             maxlevel => "warning", minlevel => "emergency",
             filename => $options{logfile} . ".err", message_layout => "%t $logFormat",
@@ -111,7 +117,9 @@ sub setup
 
    # }}}2
    
-   $log->info( "Set up output log to level [ $options{verbosity} ]" );
+   $logger->info( "Set up output log to level [ $options{verbosity} ]" );
+
+   return $logger;
 
 } # }}}1
 
@@ -124,9 +132,14 @@ It takes care of my usual logger setup
 
 =head1 SYNOPSIS
 
-  use PConley::Log::Setup;
+  use PConley::Log::Setup qw/ log_setup /;
 
-  my $log = setup( Log::Handler->new(), verbosity => 2, logfile => 'messages' );
+  my $log = log_setup( Log::Handler->new(), verbosity => 2, logfile => 'messages' );
+
+  OR
+
+  my $log = Log::Handler->new();
+  log_setup( $log, ... );
 
 =head1 DESCRIPTION
 
