@@ -9,15 +9,66 @@ use utf8;
 
 use Log::Handler;
 use Params::Validate;
+use Term::ANSIColor;
 
 require Exporter;
 our @ISA = qw/ Exporter /;
 
 our @EXPORT_OK = qw/ log_setup /;
 
+# User messages: 
+# These do not print the line number or level in normal operation; they're
+# intended simply to replace general output
+#  notice : normal messages (ie., progress). print on 0+
+#  error  : errors that should kill the program. print on 0+
+#
+# Diagnostic messages
+# Include the line number and level. Intended mainly for debugging
+#  debug          : routine logging messages. print on 2
+#  info           : slightly more important logging messages. print on 1+
+#  warning        : routine logging messages denoting anything bad. print on 1+
+#  critical-alert : (equivalent to error)
+#  emergency      : unused
+
+my $verbosity = 0;
+
+my %colortable = (
+   DEBUG    => "reset",
+   INFO     => "green",
+   NOTICE   => "bold",
+   WARNING  => "green",
+   ERROR    => "red",
+   CRITICAL => "bold red",
+   ALERT    => "bold red",
+   EMERGENCY=> "bold red",
+);
+
+# Function: format( $message ) {{{1
+# Purpose:  format messages to be printed when verbosity>1
+# Argument: hashref of the message layout strings
+sub format
+{
+   my $msg = shift;
+   $msg->{subroutine} =~ s/.*:://g;
+
+   print color $colortable{$msg->{level}};
+
+   if ( $verbosity == 2 )
+   {
+      printf "%9s %15.15s:%-4d %s", 
+         $msg->{level}, $msg->{subroutine}, $msg->{line}, $msg->{message};
+   }
+   else
+   {
+      printf "%9s :%-4d %s", $msg->{level}, $msg->{line}, $msg->{message};
+   }
+
+   print color "reset";
+}
+
 # Function: log_setup( Log::Handler->new(), verbosity => $verb, logfile => $out ) {{{1
 # Purpose : Call Log::Handler methods to set up its output
-#           -1 = Quiet:   nothing is printed to stdout/stderr; errors are
+#           -1 = Quiet:   only errors are printed to stdout/stderr; errors are
 #                         written to the log file (if given)
 #            0 = Default: notice -> error are written to screen
 #            1 = Verbose: info -> error are written to screen; messages are
@@ -47,77 +98,63 @@ sub log_setup
          },
       } );
 
-   my $logFormat = "[%L] l.%l: %m";
+   $verbosity = $options{verbosity};
+   my $log_file_format = "%T [%L] %s:%l\n		%m";
 
-   # Debug mode {{{2
-   if ( $options{verbosity} > 0 )
-   {
+   # Logfiles {{{2
+   # TODO: use &format?
 
-      # info is level 6, debug is level 7. Print info for $verb = 1, debug for
-      # $verb = 2
-      my $debug_verbosity = $options{verbosity} + 5;
-
-      $logger->add(
-         screen => {
-            maxlevel => $debug_verbosity, minlevel => "info",
-            log_to => "STDOUT", message_layout => $logFormat,
-         }
-      );
-
-      if ( defined $options{logfile} )
-      {
-         $logger->add(
-            file => {
-               maxlevel => "info", minlevel => "emergency",
-               filename => $options{logfile} . ".log", message_layout => "%T [%L] %m",
-            }
-         );
-      }
-
-   }
-
-   # Debug and default modes {{{2
-   if ( $options{verbosity} >= 0 )
-   {
-      $logger->add(
-         screen => {
-            maxlevel => "notice", minlevel => "notice",
-            log_to => "STDOUT", message_layout => $logFormat,
-         }
-      );
-
-      $logger->add(
-         screen => {
-            maxlevel => "warning", minlevel => "error",
-            log_to => "STDERR", message_layout => $logFormat,
-         }
-      );
-
-   }
-
+   # Debug log
    $logger->add(
-      forward => {
-         maxlevel => "critical", minlevel => "emerg",
-         message_layout => $logFormat,
-         forward_to => sub { die "$_[0]->{message}" }
-      }
-   );
+      file => {
+         maxlevel => $options{verbosity}+5, minlevel => "emergency",
+         filename => $options{logfile} . ".debug", 
+         message_layout => $log_file_format,
+      } ) if ( $options{verbosity} >= 0 && defined $options{logfile} );
 
-   # error-file {{{2
-   if ( defined $options{logfile} )
-   {
-      $logger->add(
-         file => {
-            maxlevel => "warning", minlevel => "emergency",
-            filename => $options{logfile} . ".err", message_layout => "%t $logFormat",
-            mode => "trunc", fileopen => 0,
-         }
-      );
-   }
+   # Error log
+   $logger->add(
+      file => {
+         maxlevel => "warning", minlevel => "emergency",
+         filename => $options{logfile} . ".err", 
+         message_layout => $log_file_format,
+         mode => "trunc", fileopen => 0,
+      } ) if ( defined $options{logfile} );
+
+   # Stdout {{{2
+
+   # Debug mode
+   $logger->add( forward => {
+         forward_to  => \&format,
+         message_pattern => [ qw/%L %s %l %m/ ],
+         message_layout => "%m",
+         # info is level 6, debug is level 7. Print info for $verb = 1,
+         # debug for $verb = 2
+         maxlevel => $options{verbosity}+5, minlevel => "emerg",
+      } ) if ( $options{verbosity} > 0 );
+
+   # Default mode
+   $logger->add(
+      screen => {
+         maxlevel => "notice", minlevel => "notice",
+         log_to => "STDOUT", message_layout => "%m",
+      } ) if ( $options{verbosity} == 0 );
+
+   # Errors
+   $logger->add( 
+      forward => {
+         maxlevel => "error", minlevel => "alert",
+         message_pattern => [ qw/%m %L/ ],
+         message_layout => "%m",
+         forward_to => 
+            sub { print( (ucfirst lc "$_[0]->{level}: ") . $_[0]->{message} ); exit },
+      } );
 
    # }}}2
-   
-   $logger->info( "Set up output log to level [ $options{verbosity} ]" );
+
+   $logger->debug( "Set up output log to level: $options{verbosity}" );
+   $logger->debug( "Writing to logfile: $options{logfile}" ) 
+      if ( defined $options{logfile} );
 
    return $logger;
 
@@ -125,6 +162,9 @@ sub log_setup
 
 1;
 __END__
+
+# {{{1 
+
 =head1 NAME
 
 PConley::Log::Setup - Perl extension to save space when I'm writing modules.
@@ -169,8 +209,8 @@ logfile.log; this file is appended to on each run.
 
 =head1 DEPENDENCIES
 
-Log::Handler
-Params::Validate
+ Log::Handler
+ Params::Validate
 
 =head1 AUTHOR
 

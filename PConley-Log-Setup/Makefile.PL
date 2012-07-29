@@ -6,7 +6,7 @@ WriteMakefile(
     NAME              => 'PConley::Log::Setup',
     VERSION_FROM      => 'lib/PConley/Log/Setup.pm', # finds $VERSION
     PREREQ_PM         => { 'Params::Validate' => 0, 'Log::Handler' => 0 }, # e.g., Module::Name => 1.1
-    PREFIX            => '/home/pconley/perl',
+ #     PREFIX            => '/home/pconley/perl',
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/PConley/Log/Setup.pm', # retrieve abstract from module
        AUTHOR         => 'Patrick Conley <pconley@uvic.ca>') : ()),
