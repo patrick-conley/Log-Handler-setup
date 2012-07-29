@@ -1,6 +1,6 @@
 package PConley::Log::Setup;
 
-our $VERSION = '11.11.22';
+our $VERSION = '12.07.30';
 
 use 5.012004;
 use strict;
@@ -19,27 +19,29 @@ our @EXPORT_OK = qw/ log_setup /;
 # User messages: 
 # These do not print the line number or level in normal operation; they're
 # intended simply to replace general output
-#  notice : normal messages (ie., progress). print on 0+
-#  error  : errors that should kill the program. print on 0+
+#  notice: normal messages (ie., progress). print on 0+
+#  emerg : errors that should kill the program (via Log->die). print on 0+
+#  error-alert : errors that should *eventually* kill the program. print on
+#          0+. For example, use this to give a specific error message within a
+#          function, then check the return value and print a general error
+#          with die()
 #
 # Diagnostic messages
-# Include the line number and level. Intended mainly for debugging
-#  debug          : routine logging messages. print on 2
-#  info           : slightly more important logging messages. print on 1+
-#  warning        : routine logging messages denoting anything bad. print on 1+
-#  critical-alert : (equivalent to error)
-#  emergency      : unused
+# Include the line number and level. Intended for debugging
+#  debug  : routine logging messages. print on 2
+#  info   : slightly more important logging messages. print on 1+
+#  warning: routine logging messages denoting anything bad. print on 1+
 
 my $verbosity = 0;
 
 my %colortable = (
    DEBUG    => "reset",
    INFO     => "green",
+   WARNING  => "yellow",
    NOTICE   => "bold",
-   WARNING  => "green",
    ERROR    => "red",
-   CRITICAL => "bold red",
-   ALERT    => "bold red",
+   CRITICAL => "red",
+   ALERT    => "red",
    EMERGENCY=> "bold red",
 );
 
@@ -66,17 +68,13 @@ sub format
    print color "reset";
 }
 
-# Function: log_setup( Log::Handler->new(), verbosity => $verb, logfile => $out ) {{{1
-# Purpose : Call Log::Handler methods to set up its output
-#           -1 = Quiet:   only errors are printed to stdout/stderr; errors are
-#                         written to the log file (if given)
-#            0 = Default: notice -> error are written to screen
-#            1 = Verbose: info -> error are written to screen; messages are
-#                         duplicated to the log file (if given)
-#            2 = Verbose: debug -> error are written to screen
+# Function: log_setup( Log::Handler->new(), verbosity => $verb, logfile => $out, silent => ? ) {{{1
+# Purpose : Call Log::Handler methods to set up its output. See POD for an
+#           up-to-date explanation of what is printed when.
 # Input   : Log::Handler object
 #           [ int verbosity ]
 #           [ string logfile ]
+#           [ bool runs-silently ]
 # Return  : N/A
 sub log_setup
 {
@@ -95,6 +93,10 @@ sub log_setup
          logfile => {
             type => Params::Validate::SCALAR,
             optional => 1,
+         },
+         silent => {
+            type => Params::Validate::BOOLEAN,
+            default => 0,
          },
       } );
 
@@ -115,7 +117,7 @@ sub log_setup
    # Error log
    $logger->add(
       file => {
-         maxlevel => "warning", minlevel => "emergency",
+         maxlevel => "error", minlevel => "emergency",
          filename => $options{logfile} . ".err", 
          message_layout => $log_file_format,
          mode => "trunc", fileopen => 0,
@@ -147,14 +149,17 @@ sub log_setup
          message_pattern => [ qw/%m %L/ ],
          message_layout => "%m",
          forward_to => 
-            sub { print( (ucfirst lc "$_[0]->{level}: ") . $_[0]->{message} ); exit },
-      } );
+            sub { print STDERR (ucfirst lc "$_[0]->{level}:"), $_[0]->{message} },
+      } ) if ( $options{verbosity} == 0 );
 
    # }}}2
 
-   $logger->debug( "Set up output log to level: $options{verbosity}" );
-   $logger->debug( "Writing to logfile: $options{logfile}" ) 
-      if ( defined $options{logfile} );
+   if ( !$options{silent} )
+   {
+      $logger->debug( "Set up output log to level: $options{verbosity}" );
+      $logger->debug( "Writing to logfile: $options{logfile}" ) 
+         if ( defined $options{logfile} );
+   }
 
    return $logger;
 
@@ -163,7 +168,7 @@ sub log_setup
 1;
 __END__
 
-# {{{1 
+{{{
 
 =head1 NAME
 
@@ -193,19 +198,20 @@ The program accepts three arguments: a Log::Handler object, the verbosity
 The verbosity has four options. Each level includes the behaviour of
 lower-numbered levels
 
-   -1 = Quiet   : critical -> emerg written to screen and kill the program; 
-                  warning -> emerg written to the error logfile if given
-   0  = Default : notice -> error written to screen
-   1  = Verbose : info written to screen; 
-                  info -> emerg written to the logfile if given
-   2  = Verbose : debug written to screen
+  -1 = Quiet  : emerg is written to stderr
+                error -> emerg are written to the error logfile (if given)
+   0 = Default: notice is written to stdout
+   1 = Verbose: info and warn are written to stdout
+                all messages give detailed caller information
+                info -> emerg are written to the logfile (if given)
+   2 = Verbose: debug is written to stdout
 
 =head2 LOGFILE
 
 If provided, messages will be written to a logfile as well as the screen.
 Warnings and errors write to logfile.err; the file is truncated before each
 run of the program. Routine messages, if enabled, will be written to
-logfile.log; this file is appended to on each run.
+logfile.debug; this file is appended to on each run.
 
 =head1 DEPENDENCIES
 

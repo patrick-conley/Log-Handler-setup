@@ -39,14 +39,15 @@ is( $log->is_error(), 1, "error displays on verbose" );
 is( $log->is_info(), 1, "info displays" );
 is( $log->is_debug(), 0, "debug doesn't display" );
 
-$log = PConley::Log::Setup::log_setup( Log::Handler->new(), verbosity => 2 );
+$log = PConley::Log::Setup::log_setup( Log::Handler->new(), verbosity => 2,
+   silent => 1 );
 is( $log->is_error(), 1, "error displays on very verbose" );
 is( $log->is_info(), 1, "info displays" );
 is( $log->is_debug(), 1, "debug displays" );
 
 $log = PConley::Log::Setup::log_setup( Log::Handler->new(), verbosity => -1 );
 is( $log->is_emerg(), 0, "emerg doesn't display  on quiet" );
-is( $log->is_error(), 1, "error display" );
+is( $log->is_error(), 0, "error display" );
 is( $log->is_notice(), 0, "notice doesn't display" );
 is( $log->is_debug(), 0, "debug doesn't display" );
 
@@ -58,3 +59,4 @@ is( $log->is_error(), 1, "error displays" );
 is( $log->is_notice(), 0, "notice doesn't display" );
 is( $log->is_debug(), 0, "debug doesn't display" );
 
+unlink "test.debug";
