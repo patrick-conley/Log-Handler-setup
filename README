@@ -1,11 +1,12 @@
-PConley-Log-Setup version 11.11.22
-==================================
+PConley-Log-Setup
+=================
 
-PConley::Log::Setup offers a single function to take care of my typical setup
+PConley::Log::Setup exports a single function to take care of my typical setup
 for Log::Handler. The verbosity, and presence and names of logfiles can be
 customized.
 
 INSTALLATION
+============
 
 To install this module type the following:
 
@@ -15,6 +16,7 @@ To install this module type the following:
    make install
 
 DEPENDENCIES
+============
 
 This module requires these other modules and libraries:
 
@@ -22,6 +24,7 @@ This module requires these other modules and libraries:
 	Params::Validate
 
 COPYRIGHT AND LICENCE
+============
 
 Put the correct copyright and licence information here.
 
