@@ -149,7 +149,7 @@ sub log_setup
          message_pattern => [ qw/%m %L/ ],
          message_layout => "%m",
          forward_to => 
-            sub { print STDERR (ucfirst lc "$_[0]->{level}:"), $_[0]->{message} },
+            sub { print STDERR (ucfirst lc "$_[0]->{level}: "), $_[0]->{message} },
       } ) if ( $options{verbosity} == 0 );
 
    # }}}2
