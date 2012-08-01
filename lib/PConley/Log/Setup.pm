@@ -10,6 +10,8 @@ use utf8;
 use Log::Handler;
 use Params::Validate;
 use Term::ANSIColor;
+use Term::ReadKey;
+use Text::Wrap;
 
 require Exporter;
 our @ISA = qw/ Exporter /;
@@ -32,9 +34,9 @@ our @EXPORT_OK = qw/ log_setup /;
 #  info   : slightly more important logging messages. print on 1+
 #  warning: routine logging messages denoting anything bad. print on 1+
 
-my $verbosity = 0;
+my $Verbosity = 0;
 
-my %colortable = (
+my %Colourtable = (
    DEBUG    => "reset",
    INFO     => "green",
    WARNING  => "yellow",
@@ -45,6 +47,9 @@ my %colortable = (
    EMERGENCY=> "bold red",
 );
 
+my $Term_Width;
+( $Term_Width, undef, undef, undef ) = Term::ReadKey::GetTerminalSize();
+
 # Function: format( $message ) {{{1
 # Purpose:  format messages to be printed when verbosity>1
 # Argument: hashref of the message layout strings
@@ -53,9 +58,19 @@ sub format
    my $msg = shift;
    $msg->{subroutine} =~ s/.*:://g;
 
-   print color $colortable{$msg->{level}};
+   # Format the message
+   my $indent = $Verbosity == 2 ? 31 : 16;    # Width of the level, sub, etc.
+   local($Text::Wrap::columns) = $Term_Width; # #columns to use
+   local($Text::Wrap::huge) = "overflow";     # don't mind long words
 
-   if ( $verbosity == 2 )
+   # Wrap each line of each to the maximum width, appropriately indented
+   my @message = Text::Wrap::wrap(" "x$indent, " "x$indent, $msg->{message});
+   $message[0] =~ s/^\s*//; # remove superfluous first-line indent
+   $msg->{message} = join( "\n", @message );
+
+   print color $Colourtable{$msg->{level}};
+
+   if ( $Verbosity == 2 )
    {
       printf "%9s %15.15s:%-4d %s", 
          $msg->{level}, $msg->{subroutine}, $msg->{line}, $msg->{message};
@@ -100,7 +115,7 @@ sub log_setup
          },
       } );
 
-   $verbosity = $options{verbosity};
+   $Verbosity = $options{verbosity};
    my $log_file_format = "%T [%L] %s:%l\n		%m";
 
    # Logfiles {{{2
