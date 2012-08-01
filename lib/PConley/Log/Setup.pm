@@ -67,6 +67,7 @@ sub format
    my @message = Text::Wrap::wrap(" "x$indent, " "x$indent, $msg->{message});
    $message[0] =~ s/^\s*//; # remove superfluous first-line indent
    $msg->{message} = join( "\n", @message );
+   $msg->{message} .= "\n" unless $msg->{message} =~ /\n$/;
 
    print color $Colourtable{$msg->{level}};
 
