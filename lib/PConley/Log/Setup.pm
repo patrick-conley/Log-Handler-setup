@@ -50,6 +50,8 @@ my %Colourtable = (
 my $Term_Width;
 ( $Term_Width, undef, undef, undef ) = Term::ReadKey::GetTerminalSize();
 
+$Data::Dumper::Indent = 1;
+
 # Function: format( $message ) {{{1
 # Purpose:  format messages to be printed when verbosity>1
 # Argument: hashref of the message layout strings
