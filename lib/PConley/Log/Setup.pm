@@ -1,5 +1,4 @@
 package PConley::Log::Setup;
-
 our $VERSION = '12.07.30';
 
 use 5.012004;
@@ -15,7 +14,6 @@ use Text::Wrap;
 
 require Exporter;
 our @ISA = qw/ Exporter /;
-
 our @EXPORT_OK = qw/ log_setup /;
 
 # User messages: 
@@ -24,9 +22,9 @@ our @EXPORT_OK = qw/ log_setup /;
 #  notice: normal messages (ie., progress). print on 0+
 #  emerg : errors that should kill the program (via Log->die). print on 0+
 #  error-alert : errors that should *eventually* kill the program. print on
-#          0+. For example, use this to give a specific error message within a
-#          function, then check the return value and print a general error
-#          with die()
+#          0+. For example, use this to print a specific error message within
+#          a function, then check the function's return value and print a
+#          general error with die()
 #
 # Diagnostic messages
 # Include the line number and level. Intended for debugging
@@ -52,10 +50,10 @@ my $Term_Width;
 
 $Data::Dumper::Indent = 1;
 
-# Function: format( $message ) {{{1
+# Function: _format( $message ) {{{1
 # Purpose:  format messages to be printed when verbosity>1
 # Argument: hashref of the message layout strings
-sub format
+sub _format
 {
    my $msg = shift;
    $msg->{subroutine} =~ s/.*:://g;
@@ -96,7 +94,6 @@ sub format
 # Return  : N/A
 sub log_setup
 {
-
    my $logger = shift;
 
    my %options = Params::Validate::validate( @_, {
@@ -145,12 +142,18 @@ sub log_setup
 
    # Debug mode
    $logger->add( forward => {
-         forward_to  => \&format,
+         forward_to  => \&_format,
          message_pattern => [ qw/%L %s %l %m/ ],
          message_layout => "%m",
          # info is level 6, debug is level 7. Print info for $verb = 1,
          # debug for $verb = 2
          maxlevel => $options{verbosity}+5, minlevel => "emerg",
+      } ) if ( $options{verbosity} > 0 );
+
+   # Bypass Carp::croak for $logger->die()
+   $logger->add( forward => {
+         forward_to => sub { exit 1 },
+         maxlevel => "emerg", minlevel => "emerg",
       } ) if ( $options{verbosity} > 0 );
 
    # Default mode
