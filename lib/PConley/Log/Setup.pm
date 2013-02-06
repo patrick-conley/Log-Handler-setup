@@ -60,13 +60,13 @@ sub _format
 
    # Format the message
    my $indent = $Verbosity == 2 ? 31 : 16;    # Width of the level, sub, etc.
-   local($Text::Wrap::columns) = $Term_Width; # #columns to use
+   my $spaces = " "x$indent;
+   local($Text::Wrap::columns) = $Term_Width-$indent; # #columns to use
    local($Text::Wrap::huge) = "overflow";     # don't mind long words
 
    # Wrap each line of each to the maximum width, appropriately indented
-   my @message = Text::Wrap::wrap(" "x$indent, " "x$indent, $msg->{message});
-   $message[0] =~ s/^\s*//; # remove superfluous first-line indent
-   $msg->{message} = join( "\n", @message );
+   $msg->{message} = Text::Wrap::wrap("", "", $msg->{message});
+   $msg->{message} =~ s/\n(.)/\n$spaces$1/g;
    $msg->{message} .= "\n" unless $msg->{message} =~ /\n$/;
 
    print color $Colourtable{$msg->{level}};
@@ -84,7 +84,7 @@ sub _format
    print color "reset";
 }
 
-# Function: _print_errors
+# Function: _print_errors {{{1
 # Purpose:  Errors are formatted substantially differently from other messages
 #           when not running in verboes mode
 # Input:    hashref of message layout
