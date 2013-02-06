@@ -84,6 +84,16 @@ sub _format
    print color "reset";
 }
 
+# Function: _print_errors
+# Purpose:  Errors are formatted substantially differently from other messages
+#           when not running in verboes mode
+# Input:    hashref of message layout
+# Return:   N/A
+sub _print_errors
+{
+   print STDERR (ucfirst lc "$_[0]->{level}: "), $_[0]->{message};
+}
+
 # Function: log_setup( Log::Handler->new(), verbosity => $verb, logfile => $out, silent => ? ) {{{1
 # Purpose : Call Log::Handler methods to set up its output. See POD for an
 #           up-to-date explanation of what is printed when.
@@ -153,7 +163,7 @@ sub log_setup
    # Bypass Carp::croak for $logger->die()
    $logger->add( forward => {
          forward_to => sub { exit 1 },
-         maxlevel => "emerg", minlevel => "emerg",
+         maxlevel => "alert", minlevel => "emerg",
       } ) if ( $options{verbosity} > 0 );
 
    # Default mode
@@ -166,11 +176,18 @@ sub log_setup
    # Errors
    $logger->add( 
       forward => {
-         maxlevel => "error", minlevel => "alert",
+         maxlevel => "error", minlevel => "critical",
          message_pattern => [ qw/%m %L/ ],
          message_layout => "%m",
-         forward_to => 
-            sub { print STDERR (ucfirst lc "$_[0]->{level}: "), $_[0]->{message} },
+         forward_to => \&_print_errors,
+      } ) if ( $options{verbosity} == 0 );
+
+   $logger->add(
+      forward => {
+         maxlevel => "alert", minlevel => "alert",
+         message_pattern => [ qw/%m %L/ ],
+         message_layout => "%m",
+         forward_to => sub { _print_errors( @_ ); exit 1 },
       } ) if ( $options{verbosity} == 0 );
 
    # }}}2
