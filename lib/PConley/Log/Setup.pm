@@ -226,7 +226,7 @@ __END__
 =head1 NAME
 
 PConley::Log::Setup - Perl extension to save space when I'm writing modules.
-It takes care of my usual logger setup
+It takes care of my usual logger setup.
 
 =head1 SYNOPSIS
 
@@ -270,6 +270,9 @@ logfile.debug; this file is appended to on each run.
 
  Log::Handler
  Params::Validate
+ Term::ANSIColor
+ Term::ReadKey
+ Text::Wrap
 
 =head1 AUTHOR
 
