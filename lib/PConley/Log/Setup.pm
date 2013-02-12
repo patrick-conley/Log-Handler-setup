@@ -33,6 +33,8 @@ our @EXPORT_OK = qw/ log_setup /;
 #  warning: routine logging messages denoting anything bad. print on 1+
 
 my $Verbosity = 0;
+# Amount to skip at the start of the line: vverbose, verbose, long messages
+my @Indent = ( 31, 16, 8 );
 
 my %Colourtable = (
    DEBUG    => "reset",
@@ -59,13 +61,23 @@ sub _format
    $msg->{subroutine} =~ s/.*:://g;
 
    # Format the message
-   my $indent = $Verbosity == 2 ? 31 : 16;    # Width of the level, sub, etc.
-   my $spaces = " "x$indent;
-   local($Text::Wrap::columns) = $Term_Width-$indent; # #columns to use
-   local($Text::Wrap::huge) = "overflow";     # don't mind long words
+   my $indent = $Verbosity == 2 ? $Indent[0] : $Indent[1]; # Width of the level, sub, etc.
 
    # Remove any trailing newline (put it back later)
    $msg->{message} =~ s/\n\s*$//;
+
+   # Give long lines plenty of space
+   my @lines = $msg->{message} =~ /\n/g;
+   if ( @lines > 5 )
+   {
+      $msg->{message} =~ s/^/\n/;
+      $indent = $Indent[2];
+   }
+
+   my $spaces = " "x$indent;
+
+   local($Text::Wrap::columns) = $Term_Width-$indent; #columns to use
+   local($Text::Wrap::huge) = "overflow";     # don't mind long words
 
    # Wrap each line of each to the maximum width, appropriately indented
    $msg->{message} = Text::Wrap::wrap("", "", $msg->{message});
