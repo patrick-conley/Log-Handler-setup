@@ -22,9 +22,12 @@ This module requires these other modules and libraries:
 
 	Log::Handler
 	Params::Validate
+    Term::ANSIColor
+    Term::ReadKey
+    Text::Wrap
 
 COPYRIGHT AND LICENCE
-============
+=====================
 
 Put the correct copyright and licence information here.
 
