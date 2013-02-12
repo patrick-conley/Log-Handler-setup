@@ -64,10 +64,12 @@ sub _format
    local($Text::Wrap::columns) = $Term_Width-$indent; # #columns to use
    local($Text::Wrap::huge) = "overflow";     # don't mind long words
 
+   # Remove any trailing newline (put it back later)
+   $msg->{message} =~ s/\n\s*$//;
+
    # Wrap each line of each to the maximum width, appropriately indented
    $msg->{message} = Text::Wrap::wrap("", "", $msg->{message});
-   $msg->{message} =~ s/\n(.)/\n$spaces$1/g;
-   $msg->{message} .= "\n" unless $msg->{message} =~ /\n$/;
+   $msg->{message} =~ s/\n/\n$spaces/g;
 
    print color $Colourtable{$msg->{level}};
 
@@ -82,6 +84,7 @@ sub _format
    }
 
    print color "reset";
+   print "\n";
 }
 
 # Function: _print_errors {{{1
